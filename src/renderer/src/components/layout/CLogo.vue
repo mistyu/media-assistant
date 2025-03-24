@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="img"></div>
-    <div class="name">易媒助手</div>
+    <div class="name">xx助手</div>
   </div>
 </template>
 

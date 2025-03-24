@@ -20,7 +20,11 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
-    "electron-updater": "^6.3.9"
+    "@icon-park/vue-next": "^1.4.2",
+    "ant-design-vue": "4.x",
+    "electron-updater": "^6.3.9",
+    "hasha": "5",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.0.0",

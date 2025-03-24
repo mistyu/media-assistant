@@ -1,5 +1,8 @@
 <template>
-  <CHeader />
+  <div class="main">
+    <CHeader />
+    <router-view></router-view>
+  </div>
 </template>
 
 <script setup>
