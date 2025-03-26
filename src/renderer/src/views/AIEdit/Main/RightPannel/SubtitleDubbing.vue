@@ -1,0 +1,65 @@
+<template>
+  <div class="title">
+    镜头1 - 字幕与配音
+  </div>
+  <div class="tip1">添加字幕内容</div>
+  <div class="tip2">若添加多条字幕，最终每条成片会随机选其一来使用</div>
+  <div class="subtitle">
+    <div class="name">
+    字幕1
+    </div>
+    <div>
+      <a-textarea
+        v-model:value="value"
+        class="subtitle-textarea"
+        :bordered="false"
+        :show-count="false"
+        placeholder="请添加字幕"
+        :rows="6"
+      />
+    </div>
+    
+  </div>
+  <div>
+      <a-button class="add-sub-title">添加字幕</a-button>
+    </div>
+</template>
+
+<script setup></script>
+
+<style scoped>
+.title {
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e8e8e8;
+}
+.tip1 {
+  font-size: 12px;
+  color: #b0b0b0;
+  margin-top: 10px;
+}
+.tip2 {
+  font-size: 12px;
+  color: #1677ff;
+  margin-top: 10px;
+}
+.subtitle {
+  width: 100%;
+  height: 200px;
+  font-size: 14px;
+  margin-top: 20px;
+  background-color: #f7f7f7;
+  border-radius: 4px;
+  padding: 10px;
+}
+.name {
+  color: #2b2b2b;
+}
+.subtitle-textarea {
+  margin-top: 10px;
+  background-color: #fff;
+}
+.add-sub-title {
+  width: 100%;
+  margin-top: 10px;
+}
+</style>
