@@ -30,11 +30,16 @@
                 />
               </div>
             </div>
-            <div>
-              <div class="avatar-uploader" @click="handleChange(index)">
+            <div class="uploader-content">
+              <div v-if="!item.path" class="avatar-uploader" @click="handleChange(index)">
                 <plus-outlined></plus-outlined>
                 <div class="ant-upload-text">添加素材</div>
               </div>
+              <div v-else>
+                <video ref="videoRef" class="video" src="/Users/lichenhui/Desktop/TIAM/sucai/157_1742887970.mp4"></video>
+                <CloseOutlined @click="deleteVideo(index)" />
+              </div>
+              
             </div>
             <div class="config-bottom">
               <div>镜头配置</div>
@@ -73,9 +78,11 @@
 import { ref } from 'vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import Whole from './RightPannel/Whole.vue'
+import { CloseOutlined } from '@ant-design/icons-vue';
 import SubtitleDubbing from './RightPannel/SubtitleDubbing.vue'
 import { mergeVideos, mergeBgm } from '../../../utils/ffmpeg.js'
 import { getFilePath, getDirPath } from '../../../utils/path.js'
+const videoRef = ref(null);
 const configs = ref([
   {
     path: ''
@@ -106,6 +113,10 @@ const handleChange = async (index) => {
     'RMVB'
   ])
   configs.value[index].path = res
+  if (videoRef.value) videoRef.value.load()
+}
+const deleteVideo = (index) => {
+  configs.value[index].path = ''
 }
 
 const onAdd = () => {
@@ -205,7 +216,7 @@ const onChangeRightPannel = (type) => {
 }
 .config-content__item {
   width: 400px;
-  height: 210px;
+  height: 240px;
   border: 2px solid #eee;
   border-radius: 4px;
   margin-top: 10px;
@@ -253,9 +264,14 @@ const onChangeRightPannel = (type) => {
   border-left: 2px solid #e8e8e8;
   padding: 20px;
 }
-</style>
-
-<style>
+.uploader-content {
+  display: flex;
+  align-items: center;
+}
+.video {
+  width: 80px;
+  margin-left: 10px;
+}
 .avatar-uploader {
   padding: 10px;
   display: flex;
@@ -277,4 +293,8 @@ const onChangeRightPannel = (type) => {
   flex-direction: column;
   align-items: center;
 }
+</style>
+
+<style>
+
 </style>
