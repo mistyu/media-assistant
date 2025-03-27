@@ -1,10 +1,7 @@
 <template>
   <div>
-    <div>{{ info }}</div>
     <div class="header">
-
-      <a-button type="primary">合成视频</a-button>
-      
+      <a-button type="primary" @click="onMergeVideos">合成视频</a-button>
     </div>
     <div class="content">
       <div class="config">
@@ -34,19 +31,14 @@
               </div>
             </div>
             <div>
-              <a-upload
-                :show-upload-list="false"
-                accept=".MP4, .MOV, .MKV, .FLV, .MPEG, .OGG, .VOB, .WEBM, .WMV, .RMVB"
-                class="avatar-uploader"
-                @change="handleChange"
-              >
+              <div class="avatar-uploader" @click="handleChange(index)">
                 <plus-outlined></plus-outlined>
                 <div class="ant-upload-text">添加素材</div>
-              </a-upload>
+              </div>
             </div>
             <div class="config-bottom">
               <div>镜头配置</div>
-              <a-button class="config-bottom-btn">字幕与配音</a-button>
+              <a-button class="config-bottom-btn" @click="onChangeRightPannel('subtitle')">字幕与配音</a-button>
               <a-button class="config-bottom-btn">文字标题</a-button>
               <a-button class="config-bottom-btn">素材原始时长</a-button>
             </div>
@@ -70,8 +62,8 @@
         </div>
       </div>
       <div class="detail">
-        <!-- <Whole v-if="detailView === 'whole'" /> -->
-        <SubtitleDubbing />
+        <Whole v-if="detailView === 'whole'" :on-bgm="onBgm" :bgm="bgm" :deleteBgm="deleteBgm" />
+        <SubtitleDubbing v-if="detailView === 'subtitle'" :onClose="onChangeRightPannel" />
       </div>
     </div>
   </div>
@@ -80,26 +72,46 @@
 <script setup>
 import { ref } from 'vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
-// import Whole from './RightPannel/Whole.vue'
+import Whole from './RightPannel/Whole.vue'
 import SubtitleDubbing from './RightPannel/SubtitleDubbing.vue'
-import { copyVideos } from '../../../utils/ffmpeg.js'
-const path = ref('')
-const info = ref('none')
-console.log(window.electronAPI, 'window.electronAPI')
-const handleChange = async (file) => {
-  console.log(file.file.path, 'e', file)
-  try {
-    const res = await copyVideos()
-    info.value = JSON.stringify(res) + 'success'
-  } catch (error) {
-    info.value = JSON.stringify(error) + 'error'
+import { mergeVideos, mergeBgm } from '../../../utils/ffmpeg.js'
+import { getFilePath, getDirPath } from '../../../utils/path.js'
+const configs = ref([
+  {
+    path: ''
+  },
+  {
+    path: ''
   }
-  
-  path.value = file.file.path
+])
+const bgm = ref('')
+const onBgm = async () => {
+  const res = await getFilePath(['MP3'])
+  bgm.value = res
 }
-const configs = ref([{}, {}])
+const deleteBgm = () => {
+  bgm.value = ''
+}
+const handleChange = async (index) => {
+  const res = await getFilePath([
+    'MP4',
+    'MOV',
+    'MKV',
+    'FLV',
+    'MPEG',
+    'OGG',
+    'VOB',
+    'WEBM',
+    'WMV',
+    'RMVB'
+  ])
+  configs.value[index].path = res
+}
+
 const onAdd = () => {
-  configs.value.push({})
+  configs.value.push({
+    path: ''
+  })
 }
 const onDelete = (index) => {
   if (configs.value.length <= 1) {
@@ -108,7 +120,22 @@ const onDelete = (index) => {
   configs.value.splice(index, 1)
 }
 
+const onMergeVideos = async () => {
+  const output = await getDirPath()
+
+  const inputs = []
+  configs.value.forEach((item) => {
+    if (item.path) {
+      inputs.push(item.path)
+    }
+  })
+  const outpath = await mergeVideos(inputs, output + '/' + new Date().getTime() + '.mp4')
+  await mergeBgm(outpath, bgm.value, output + '/' + new Date().getTime() + '.mp4')
+}
 const detailView = ref('whole')
+const onChangeRightPannel = (type) => {
+  detailView.value = type
+}
 </script>
 
 <style scoped>
@@ -229,7 +256,8 @@ const detailView = ref('whole')
 </style>
 
 <style>
-.avatar-uploader > .ant-upload {
+.avatar-uploader {
+  padding: 10px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -240,17 +268,9 @@ const detailView = ref('whole')
   margin-top: 10px;
   margin-left: 10px;
 }
-.ant-upload-select-picture-card i {
-  font-size: 32px;
-  color: #999;
-}
 
-.ant-upload-select-picture-card .ant-upload-text {
-  margin-top: 8px;
-  color: #666;
-}
-.avatar-uploader .ant-upload {
-  width: 74px;
+.avatar-uploader {
+  width: 84px;
   height: 108px;
   display: flex;
   justify-content: center;

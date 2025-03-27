@@ -1,6 +1,11 @@
 <template>
   <div class="title">
-    镜头1 - 字幕与配音
+    <div>
+      镜头1 - 字幕与配音
+    </div>
+    <div>
+      <CloseOutlined @click="close" />
+    </div>
   </div>
   <div class="tip1">添加字幕内容</div>
   <div class="tip2">若添加多条字幕，最终每条成片会随机选其一来使用</div>
@@ -25,12 +30,26 @@
     </div>
 </template>
 
-<script setup></script>
+<script setup>
+import { CloseOutlined } from '@ant-design/icons-vue';
+
+const props = defineProps({
+  onClose: {
+    type: Function,
+    required: true
+  }
+})
+const close = () => {
+  props.onClose('whole')
+}
+</script>
 
 <style scoped>
 .title {
   padding-bottom: 20px;
   border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
 }
 .tip1 {
   font-size: 12px;

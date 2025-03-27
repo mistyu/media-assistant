@@ -11,8 +11,12 @@
     <a-button>添加标题</a-button>
   </div> -->
   <div class="detail-item">
-    <div>背景音乐</div>
-    <a-button>添加音乐</a-button>
+    <div class="detail-item__label">背景音乐</div>
+    <a-button v-if="!bgm" @click="selectBgm">添加音乐</a-button>
+    <div v-else>
+      {{ bgm }}
+      <CloseOutlined class="delete" @click="onDelete" />
+    </div>
   </div>
   <div class="detail-item">
     <div>视频比例</div>
@@ -46,6 +50,27 @@
 
 <script setup>
 import { ref } from 'vue'
+import { CloseOutlined } from '@ant-design/icons-vue';
+const props = defineProps({
+  onBgm: {
+    type: Function,
+    required: true
+  },
+  bgm: {
+    type: String,
+    required: true
+  },
+  deleteBgm: {
+    type: Function,
+    required: true
+  }
+})
+const selectBgm = () => {
+  props.onBgm()
+}
+const onDelete = () => {
+  props.deleteBgm()
+}
 const videoRatio = ref(0)
 const onRatioChange = (value) => {
   videoRatio.value = value
@@ -73,6 +98,14 @@ const onResolutionChange = (value) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.detail-item__label {
+  width: 160px;
+}
+.delete {
+  margin-top: 8px;
+  margin-left: 20px;
+  cursor: pointer;
 }
 .switch {
   height: 32px;

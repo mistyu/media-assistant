@@ -1,51 +1,61 @@
 import ffmpegPath from '@ffmpeg-installer/ffmpeg'
 import ffprobePath from '@ffprobe-installer/ffprobe'
 import ffmpeg from 'fluent-ffmpeg'
-import { ipcMain, contextBridge, ipcRenderer } from 'electron'
+import fs from 'node:fs'
 
 ffmpeg.setFfmpegPath(ffmpegPath.path)
 ffmpeg.setFfprobePath(ffprobePath.path)
 
-// export default class FFmpeg {
-//   ffmpeg;
+export function mergeVideos(_e, inputFiles, outputFile) {
+  return new Promise((resolve, reject) => {
+    const command = ffmpeg()
 
-//   constructor(inputPath) {
-//     this.ffmpeg = ffmpeg(inputPath)
-//   }
-// }
+    inputFiles.forEach((file) => {
+      command.input(file)
+    })
 
-
-export const test = () => {
-  return new Promise((resovle, reject) => {
-    ffmpeg().input('/Users/lichenhui/Desktop/TIAM/electron-app/src/main/lib/input.mp4')
-    .output(`/Users/lichenhui/Desktop/TIAM/electron-app/src/main/lib/output.mp4${ new Date().getDateTime()}`)
-    .on('progress', progress => {
-      console.log(`Processing: ${progress.percent}% done`)
-    })
-    .on('end', () => {
-      console.log('Processing finished!')
-      resovle(true)
-    })
-    .on('error', err => {
-      console.error('Error:', err)
-      reject(err)
-    })
-    .run()
+    command
+      .on('start', (commandLine) => {
+        console.log('FFmpeg process started:', commandLine)
+      })
+      .on('progress', (progress) => {
+        console.log(`Processing: ${progress.percent}% done`)
+      })
+      .on('end', () => {
+        console.log('Merging completed!')
+        resolve(outputFile)
+      })
+      .on('error', (err) => {
+        console.error('Error:', err)
+        reject(err)
+      })
+      .mergeToFile(outputFile) // 临时目录，避免 FFmpeg 直接操作源文件
   })
-  
 }
 
-
-contextBridge.exposeInMainWorld('electronAPI', {
-  mergeVideos: () => ipcRenderer.invoke('copy-videos')
-})
-ipcMain.handle('copy-videos', async (event) => {
-    try {
-        const result = await test();
-        return { success: true, file: result };
-    } catch (error) {
-        return { success: false, error: error };
-    }
-});
-
-
+export function mergeBgm(_e, inputFile, bgmFile, outputFile) {
+  console.log(inputFile, bgmFile, outputFile, 'mergeBgm')
+  return new Promise((resolve, reject) => {
+    const command = ffmpeg()
+    // **步骤 2：添加背景音乐**
+    command
+    .input(inputFile)  // 合并后的视频
+    .input(bgmFile)   // 背景音乐
+    .complexFilter([
+        '[0:a]volume=1[a1]',   // 视频原声音量 100%
+        '[1:a]volume=0.5[a2]', // BGM 音量 50%
+        '[a1][a2]amix=inputs=2:duration=first:dropout_transition=2[aout]' // 混合音轨
+    ])
+    .outputOptions('-map 0:v:0') // 保留合并后的视频
+    .outputOptions('-map [aout]') // 使用混合后的音轨
+    .output(outputFile)
+    .on('end', () => {
+        console.log('音频合成完成');
+        fs.unlinkSync(inputFile) // 删除临时文件
+        resolve({ success: true, file: outputFile });
+    })
+    .on('error', (err) => reject({ success: false, error: err.message }))
+    .run();
+    
+  })
+}

@@ -1,10 +1,9 @@
+export async function mergeVideos(inputs = [], output) {
+  const result = await window.electron.mergeVideos(inputs, output);
+  return result
+}
 
-
-export async function copyVideos() {
-  const result = await window.electron.copyVideos();
-  if (result.success) {
-      console.log('合成成功:', result.file);
-  } else {
-      console.error('合成失败:', result.error);
-  }
+export async function mergeBgm(input, bgmFile, output) {
+  const result = await window.electron.mergeBgm(input, bgmFile, output)
+  return result
 }

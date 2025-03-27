@@ -1,21 +1,23 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
-// import './lib/ffmpeg'
+import './lib/ffmpeg'
+import { getFilePath, getDirPath } from './lib/file/path'
+import { mergeVideos, mergeBgm } from './lib/ffmpeg'
 function createWindow() {
   // Create the browser window.
+  const { screen } = require('electron');
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
-    show: false,
-    autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    width: width,
+    height: height,
     webPreferences: {
-      preload: join(__dirname, '../../preload.js'),
-      sandbox: false
+      preload: join(__dirname, '../preload/index.js'),
+      // sandbox: false,
     }
   })
+
+  mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -40,7 +42,7 @@ function createWindow() {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
-
+  
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
@@ -50,9 +52,11 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
-
+  ipcMain.handle('getFilePath', getFilePath)
+  ipcMain.handle('getDirPath', getDirPath)
+  ipcMain.handle('mergeVideos', mergeVideos)
+  ipcMain.handle('mergeBgm', mergeBgm)
   createWindow()
-
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
