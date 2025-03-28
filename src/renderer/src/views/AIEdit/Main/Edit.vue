@@ -31,15 +31,14 @@
               </div>
             </div>
             <div class="uploader-content">
-              <div v-if="!item.path" class="avatar-uploader" @click="handleChange(index)">
+              <div v-if="!item.videoPath" class="avatar-uploader" @click="handleChange(index)">
                 <plus-outlined></plus-outlined>
                 <div class="ant-upload-text">添加素材</div>
               </div>
               <div v-else>
-                <video ref="videoRef" class="video" src="/Users/lichenhui/Desktop/TIAM/sucai/157_1742887970.mp4"></video>
+                <video class="video" :src="item.videoPath" controls></video>
                 <CloseOutlined @click="deleteVideo(index)" />
               </div>
-              
             </div>
             <div class="config-bottom">
               <div>镜头配置</div>
@@ -82,13 +81,14 @@ import { CloseOutlined } from '@ant-design/icons-vue';
 import SubtitleDubbing from './RightPannel/SubtitleDubbing.vue'
 import { mergeVideos, mergeBgm } from '../../../utils/ffmpeg.js'
 import { getFilePath, getDirPath } from '../../../utils/path.js'
-const videoRef = ref(null);
 const configs = ref([
   {
-    path: ''
+    path: '',
+    videoPath: ''
   },
   {
-    path: ''
+    path: '',
+    videoPath: ''
   }
 ])
 const bgm = ref('')
@@ -113,15 +113,17 @@ const handleChange = async (index) => {
     'RMVB'
   ])
   configs.value[index].path = res
-  if (videoRef.value) videoRef.value.load()
+  configs.value[index].videoPath = res
 }
 const deleteVideo = (index) => {
   configs.value[index].path = ''
+  configs.value[index].videoPath = ''
 }
 
 const onAdd = () => {
   configs.value.push({
-    path: ''
+    path: '',
+    videoPath: ''
   })
 }
 const onDelete = (index) => {
@@ -267,6 +269,7 @@ const onChangeRightPannel = (type) => {
 .uploader-content {
   display: flex;
   align-items: center;
+  height: 146px;
 }
 .video {
   width: 80px;
