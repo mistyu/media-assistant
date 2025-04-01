@@ -3,21 +3,21 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import './lib/ffmpeg'
 import { getFilePath, getDirPath } from './lib/file/path'
-import { mergeVideos, mergeBgm } from './lib/ffmpeg'
+import { mergeVideos, mergeBgm, clipVideoToBuffer } from './lib/ffmpeg'
 function createWindow() {
   // Create the browser window.
-  const { screen } = require('electron');
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const { screen } = require('electron')
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize
   const mainWindow = new BrowserWindow({
     width: width,
     height: height,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.js')
       // sandbox: false,
     }
   })
 
-  mainWindow.webContents.openDevTools()
+  if (is.dev) mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -56,6 +56,7 @@ app.whenReady().then(() => {
   ipcMain.handle('getDirPath', getDirPath)
   ipcMain.handle('mergeVideos', mergeVideos)
   ipcMain.handle('mergeBgm', mergeBgm)
+  ipcMain.handle('clipVideoToBuffer', clipVideoToBuffer)
   createWindow()
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

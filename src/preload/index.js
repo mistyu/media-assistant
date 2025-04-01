@@ -13,7 +13,16 @@ if (process.contextIsolated) {
       mergeVideos: (inputFiles, outputFile) =>
         ipcRenderer.invoke('mergeVideos', inputFiles, outputFile),
       mergeBgm: (inputFile, bgmFile, outputFile) =>
-        ipcRenderer.invoke('mergeBgm', inputFile, bgmFile, outputFile)
+        ipcRenderer.invoke('mergeBgm', inputFile, bgmFile, outputFile),
+      clipVideoToBuffer: (inputFile, startTime, endTime, subtitleFile, outputFile) =>
+        ipcRenderer.invoke(
+          'clipVideoToBuffer',
+          inputFile,
+          startTime,
+          endTime,
+          subtitleFile,
+          outputFile
+        )
     })
     contextBridge.exposeInMainWorld('platform', process.platform)
   } catch (error) {

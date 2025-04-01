@@ -42,7 +42,7 @@
             </div>
             <div class="config-bottom">
               <div>镜头配置</div>
-              <a-button class="config-bottom-btn" @click="onChangeRightPannel('subtitle')">字幕与配音</a-button>
+              <a-button class="config-bottom-btn" @click="onChangeRightPannel('subtitle', index)">字幕与配音</a-button>
               <a-button class="config-bottom-btn">文字标题</a-button>
               <a-button class="config-bottom-btn">素材原始时长</a-button>
             </div>
@@ -56,18 +56,34 @@
             <div class="preview-header-tip">预览视频整体效果</div>
           </div>
           <div>
-            <a-button type="primary">预览</a-button>
+            <a-button type="primary" class="preview" :loading="renderLoading" @click="onPreview">预览</a-button>
           </div>
         </div>
         <div class="preview-content">
           <div class="preview-mobile">
-            <div class="preview-tip">请在每个镜头下添加素材</div>
+            <div v-if="!configs[shotIndex].previewPath" class="preview-tip">请在每个镜头下添加素材</div>
+            <video
+              v-else
+              class="preview-shot"
+              :src="configs[shotIndex].previewPath"
+              controls
+            ></video>
           </div>
         </div>
       </div>
       <div class="detail">
         <Whole v-if="detailView === 'whole'" :on-bgm="onBgm" :bgm="bgm" :deleteBgm="deleteBgm" />
-        <SubtitleDubbing v-if="detailView === 'subtitle'" :onClose="onChangeRightPannel" />
+        <SubtitleDubbing
+          v-if="detailView === 'subtitle'"
+          :onClose="onChangeRightPannel"
+          :onRenderShot="onRenderShot"
+          :setTime="setRenderTime"
+          :subtitle="configs[shotIndex].subtitleDubbing"
+          :addSubtitle="addSubtitle"
+          :setSubtitle="setSubtitle"
+          :deleteSubtitle="deleteSubtitle"
+          :setAudioTime="setAudioTime"
+        />
       </div>
     </div>
   </div>
@@ -75,22 +91,40 @@
 
 <script setup>
 import { ref } from 'vue'
-import { PlusOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { PlusOutlined, CloseOutlined } from '@ant-design/icons-vue'
 import Whole from './RightPannel/Whole.vue'
-import { CloseOutlined } from '@ant-design/icons-vue';
 import SubtitleDubbing from './RightPannel/SubtitleDubbing.vue'
-import { mergeVideos, mergeBgm } from '../../../utils/ffmpeg.js'
+import { mergeVideos, mergeBgm, clipVideoToBuffer } from '../../../utils/ffmpeg.js'
 import { getFilePath, getDirPath } from '../../../utils/path.js'
+import { generateSubtitles } from '../../../utils/tts.js'
 const configs = ref([
   {
     path: '',
-    videoPath: ''
+    videoPath: '',
+    subtitleDubbing: [
+      {
+        subtitle: '',
+        shotStartTime: 0,
+        shotEndTime: 0
+      }
+    ],
+    previewPath: ''
   },
   {
     path: '',
-    videoPath: ''
-  }
+    videoPath: '',
+    subtitleDubbing: [
+      {
+        subtitle: '',
+        shotStartTime: 0,
+        shotEndTime: 0
+      }
+    ],
+    previewPath: ''
+  },
 ])
+const shotIndex = ref(0)
 const bgm = ref('')
 const onBgm = async () => {
   const res = await getFilePath(['MP3'])
@@ -123,7 +157,15 @@ const deleteVideo = (index) => {
 const onAdd = () => {
   configs.value.push({
     path: '',
-    videoPath: ''
+    videoPath: '',
+    subtitleDubbing: [
+      {
+        subtitle: '',
+        shotStartTime: 0,
+        shotEndTime: 0
+      }
+    ],
+    previewPath: ''
   })
 }
 const onDelete = (index) => {
@@ -138,16 +180,70 @@ const onMergeVideos = async () => {
 
   const inputs = []
   configs.value.forEach((item) => {
-    if (item.path) {
-      inputs.push(item.path)
+    if (item.previewPath) {
+      inputs.push(item.previewPath)
     }
   })
+  console.log(inputs, 'inputs')
   const outpath = await mergeVideos(inputs, output + '/' + new Date().getTime() + '.mp4')
-  await mergeBgm(outpath, bgm.value, output + '/' + new Date().getTime() + '.mp4')
+  if (bgm.value) {
+    await mergeBgm(outpath, bgm.value, output + '/' + new Date().getTime() + '.mp4')
+  }
 }
 const detailView = ref('whole')
-const onChangeRightPannel = (type) => {
+const onChangeRightPannel = (type, index) => {
+  if (!configs.value[index].videoPath) {
+    message.warning('请先添加素材')
+    return
+  }
   detailView.value = type
+  shotIndex.value = index ?? shotIndex.value
+}
+const addSubtitle = () => {
+  configs.value[shotIndex.value].subtitleDubbing.push({
+    subtitle: '',
+    shotStartTime: 0,
+    shotEndTime: 0
+  })
+}
+const deleteSubtitle = (index) => {
+  configs.value[shotIndex.value].subtitleDubbing.splice(index, 1)
+}
+const setSubtitle = (index, subtitle) => {
+  configs.value[shotIndex.value].subtitleDubbing[index].subtitle = subtitle
+}
+const setAudioTime = async (subtitleDubbing) => {
+  console.log(subtitleDubbing, 'subtitleDubbing')
+  configs.value[shotIndex.value].subtitleDubbing = subtitleDubbing
+}
+const setRenderTime = (time) => {
+  configs.value[shotIndex.value].shotStartTime = 0
+  configs.value[shotIndex.value].shotEndTime = time
+}
+const onRenderShot = async () => {
+  const outputDir = await getDirPath()
+  const config = configs.value[shotIndex.value]
+  const endTime = config.subtitleDubbing[config.subtitleDubbing.length - 1].shotEndTime
+  console.log(config, 'config')
+  const output = await clipVideoToBuffer(
+    config.videoPath,
+    0,
+    endTime,
+    generateSubtitles(config.subtitleDubbing),
+    `${outputDir}/镜头${shotIndex.value + 1}-${new Date().getTime()}.mp4`
+  )
+  configs.value[shotIndex.value].previewPath = output.file
+}
+const renderLoading = ref(false)
+const onPreview = async () => {
+  renderLoading.value = true
+  try {
+    await onRenderShot()
+  } catch (error) {
+    console.log(error, 'onPreview')
+  } finally {
+    renderLoading.value = false
+  }
 }
 </script>
 
@@ -173,6 +269,7 @@ const onChangeRightPannel = (type) => {
   justify-content: space-between;
 }
 .preview-content {
+  max-width: 420px;
   margin-top: 20px;
   height: 640px;
   border: 2px solid #eee;
@@ -183,19 +280,24 @@ const onChangeRightPannel = (type) => {
   align-items: center;
 }
 .preview-mobile {
+  width: 60%;
   background-color: rgb(43, 43, 43);
   height: 500px;
   border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-self: center;
 }
 .preview-tip {
   color: #fff;
-  margin-top: 160px;
   padding: 0 30px;
 }
 .preview-header-tip {
   margin-top: 10px;
   font-size: 12px;
   color: #b0b0b0;
+  text-align: center;
+  width: 100%;
 }
 .config {
   display: flex;
@@ -296,8 +398,9 @@ const onChangeRightPannel = (type) => {
   flex-direction: column;
   align-items: center;
 }
-</style>
-
-<style>
-
+.preview-shot {
+  height: 100%;
+  padding: 20px 0;
+  width: 100%;
+}
 </style>
