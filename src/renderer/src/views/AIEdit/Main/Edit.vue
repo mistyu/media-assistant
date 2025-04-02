@@ -1,7 +1,7 @@
 <template>
   <div class="ai-edit-wrapper">
     <div class="header">
-      <a-button type="primary" @click="onMergeVideos">合成视频</a-button>
+      <a-button type="primary" :loading="mergeLoading" @click="onMergeVideos">合成视频</a-button>
     </div>
     <div class="content">
       <div class="config">
@@ -60,15 +60,16 @@
             <div class="preview-mobile">
               <div v-if="!configs[shotIndex].coverPath" class="preview-tip">请在每个镜头下添加素材</div>
               <img v-else class="preview-shot" :src="configs[shotIndex].coverPath" controls />
+              <div class="subtitle">{{ configs[shotIndex].subtitleDubbing[subtitleIndex].subtitle }}</div>
             </div>
           </div>
         </div>
       </div>
       <div class="detail">
         <Whole v-if="detailView === 'whole'" :on-bgm="onBgm" :bgm="bgm" :deleteBgm="deleteBgm" />
-        <SubtitleDubbing v-if="detailView === 'subtitle'" :onClose="onChangeRightPannel" :onRenderShot="onRenderShot"
+        <SubtitleDubbing v-if="detailView === 'subtitle'" :onClose="onCloseSubtitle" :onRenderShot="onRenderShot"
           :set-time="setRenderTime" :subtitle="configs[shotIndex].subtitleDubbing" :addSubtitle="addSubtitle"
-          :set-subtitle="setSubtitle" :deleteSubtitle="deleteSubtitle" :setAudioTime="setAudioTime" />
+          :set-subtitle="setSubtitle" :deleteSubtitle="deleteSubtitle" :setAudioTime="setAudioTime" :set-subtitle-index="setSubtitleIndex" />
       </div>
     </div>
   </div>
@@ -177,21 +178,28 @@ const onDelete = (index) => {
   }
   configs.value.splice(index, 1)
 }
-
+const mergeLoading = ref(false)
 const onMergeVideos = async () => {
-  const output = await getDirPath()
-
-  const inputs = []
-  configs.value.forEach((item) => {
-    if (item.previewPath) {
-      inputs.push(item.previewPath)
+  mergeLoading.value = true
+  try {
+    const output = await getDirPath()
+    const inputs = []
+    configs.value.forEach((item) => {
+      if (item.previewPath) {
+        inputs.push(item.previewPath)
+      }
+    })
+    const outpath = await mergeVideos(inputs, output + '/' + new Date().getTime() + '.mp4')
+    if (bgm.value) {
+      await mergeBgm(outpath, bgm.value, output + '/' + new Date().getTime() + '.mp4')
     }
-  })
-  const outpath = await mergeVideos(inputs, output + '/' + new Date().getTime() + '.mp4')
-  if (bgm.value) {
-    await mergeBgm(outpath, bgm.value, output + '/' + new Date().getTime() + '.mp4')
+    message.success('合成视频已完成')
+  } catch (error) {
+    console.log(error, 'onMergeVideos')
+    message.error('合成视频已失败')
+  } finally {
+    mergeLoading.value = false
   }
-  message.success('合成视频已完成')
 }
 const detailView = ref('whole')
 const onChangeRightPannel = (type, index) => {
@@ -199,8 +207,17 @@ const onChangeRightPannel = (type, index) => {
     message.warning('请先添加素材')
     return
   }
+  if (shotIndex.value === index && detailView.value === 'subtitle') {
+    return
+  }
   detailView.value = type
   shotIndex.value = index ?? shotIndex.value
+  setSubtitleIndex(0)
+}
+const onCloseSubtitle = () => {
+  detailView.value = 'whole'
+  shotIndex.value = 0
+  setSubtitleIndex(0)
 }
 const addSubtitle = () => {
   configs.value[shotIndex.value].subtitleDubbing.push({
@@ -212,8 +229,13 @@ const addSubtitle = () => {
 const deleteSubtitle = (index) => {
   configs.value[shotIndex.value].subtitleDubbing.splice(index, 1)
 }
+const subtitleIndex = ref(0)
+const setSubtitleIndex = (index) => {
+  subtitleIndex.value = index
+}
 const setSubtitle = (index, subtitle) => {
   configs.value[shotIndex.value].subtitleDubbing[index].subtitle = subtitle
+  setSubtitleIndex(index)
 }
 const setAudioTime = async (subtitleDubbing) => {
   configs.value[shotIndex.value].subtitleDubbing = subtitleDubbing
@@ -304,6 +326,7 @@ const onPreview = async () => {
 }
 
 .preview-mobile {
+  position: relative;
   width: 236px;
   background-color: rgb(43, 43, 43);
   height: 480px;
@@ -448,6 +471,13 @@ const onPreview = async () => {
 }
 
 .modal-video {
+  width: 100%;
+}
+.subtitle {
+  position: absolute;
+  bottom: 20px;
+  text-align: center;
+  color: white;
   width: 100%;
 }
 </style>

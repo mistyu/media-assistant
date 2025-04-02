@@ -12,7 +12,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-const active = ref(0)
+const active = ref(1)
 const router = useRouter()
 const onActive = (index) => {
   active.value = index

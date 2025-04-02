@@ -20,7 +20,7 @@
     </div>
     <div>
       <a-textarea v-model:value="item.subtitle" class="subtitle-textarea" :bordered="false" :show-count="false"
-        placeholder="请添加字幕" :rows="2" @change="onChange($event, index)" />
+        placeholder="请添加字幕" :rows="2" @change="onChange($event, index)" @focus="onFocus(index)" />
     </div>
   </div>
   <div>
@@ -57,6 +57,10 @@ const props = defineProps({
     type: Function,
     required: true
   },
+  setSubtitleIndex: {
+    type: Function,
+    required: true
+  },
   addSubtitle: {
     type: Function,
     required: true
@@ -72,7 +76,7 @@ const props = defineProps({
 })
 
 const close = () => {
-  props.onClose('whole')
+  props.onClose()
 }
 const onChange = (e, index) => {
   props.setSubtitle(index, e.target.value)
@@ -112,6 +116,9 @@ const onCompositionAudio = async () => {
   } finally {
     compositionAudioLoading.value = false
   }
+}
+const onFocus = (index) => {
+  props.setSubtitleIndex(index)
 }
 </script>
 

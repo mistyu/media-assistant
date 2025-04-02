@@ -12,7 +12,7 @@ const router = createRouter({
     // 设置首页
     {
       path: '/',
-      redirect: 'Video',
+      redirect: 'AI',
       children: [
         {
           name: 'Video',
