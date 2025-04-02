@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="ai-edit-wrapper">
     <div class="header">
       <a-button type="primary" @click="onMergeVideos">合成视频</a-button>
     </div>
@@ -23,11 +23,7 @@
               </div>
               <div>
                 <img class="icon" src="../../../assets/icons/voice.svg" />
-                <img
-                  class="icon delete"
-                  src="../../../assets/icons/delete.svg"
-                  @click="onDelete(index)"
-                />
+                <img class="icon delete" src="../../../assets/icons/delete.svg" @click="onDelete(index)" />
               </div>
             </div>
             <div class="uploader-content">
@@ -59,34 +55,27 @@
             <a-button type="primary" class="preview" :loading="renderLoading" @click="onPreview">预览</a-button>
           </div>
         </div>
-        <div class="preview-content">
-          <div class="preview-mobile">
-            <div v-if="!configs[shotIndex].previewPath" class="preview-tip">请在每个镜头下添加素材</div>
-            <video
-              v-else
-              class="preview-shot"
-              :src="configs[shotIndex].previewPath"
-              controls
-            ></video>
+        <div class="preview-content-wrapper">
+          <div class="preview-content">
+            <div class="preview-mobile">
+              <div v-if="!configs[shotIndex].coverPath" class="preview-tip">请在每个镜头下添加素材</div>
+              <img v-else class="preview-shot" :src="configs[shotIndex].coverPath" controls />
+            </div>
           </div>
         </div>
       </div>
       <div class="detail">
         <Whole v-if="detailView === 'whole'" :on-bgm="onBgm" :bgm="bgm" :deleteBgm="deleteBgm" />
-        <SubtitleDubbing
-          v-if="detailView === 'subtitle'"
-          :onClose="onChangeRightPannel"
-          :onRenderShot="onRenderShot"
-          :setTime="setRenderTime"
-          :subtitle="configs[shotIndex].subtitleDubbing"
-          :addSubtitle="addSubtitle"
-          :setSubtitle="setSubtitle"
-          :deleteSubtitle="deleteSubtitle"
-          :setAudioTime="setAudioTime"
-        />
+        <SubtitleDubbing v-if="detailView === 'subtitle'" :onClose="onChangeRightPannel" :onRenderShot="onRenderShot"
+          :set-time="setRenderTime" :subtitle="configs[shotIndex].subtitleDubbing" :addSubtitle="addSubtitle"
+          :set-subtitle="setSubtitle" :deleteSubtitle="deleteSubtitle" :setAudioTime="setAudioTime" />
       </div>
     </div>
   </div>
+  <a-modal v-model:open="open" title="预览" :footer="null" destroy-on-close centered @ok="hideModal">
+    <video class="modal-video" :src="configs[shotIndex].previewPath" controls></video>
+
+  </a-modal>
 </template>
 
 <script setup>
@@ -95,8 +84,13 @@ import { message } from 'ant-design-vue'
 import { PlusOutlined, CloseOutlined } from '@ant-design/icons-vue'
 import Whole from './RightPannel/Whole.vue'
 import SubtitleDubbing from './RightPannel/SubtitleDubbing.vue'
-import { mergeVideos, mergeBgm, clipVideoToBuffer } from '../../../utils/ffmpeg.js'
-import { getFilePath, getDirPath } from '../../../utils/path.js'
+import {
+  mergeVideos,
+  mergeBgm,
+  clipVideoToBuffer,
+  getVideoFirstCover
+} from '../../../utils/ffmpeg.js'
+import { getFilePath, getDirPath, getTempPath } from '../../../utils/path.js'
 import { generateSubtitles } from '../../../utils/tts.js'
 const configs = ref([
   {
@@ -109,7 +103,8 @@ const configs = ref([
         shotEndTime: 0
       }
     ],
-    previewPath: ''
+    previewPath: '',
+    coverPath: ''
   },
   {
     path: '',
@@ -121,8 +116,9 @@ const configs = ref([
         shotEndTime: 0
       }
     ],
-    previewPath: ''
-  },
+    previewPath: '',
+    coverPath: ''
+  }
 ])
 const shotIndex = ref(0)
 const bgm = ref('')
@@ -148,10 +144,16 @@ const handleChange = async (index) => {
   ])
   configs.value[index].path = res
   configs.value[index].videoPath = res
+  const tempPath = await getTempPath()
+  const cover = await getVideoFirstCover(res, tempPath + new Date().getTime() + '.jpg')
+  configs.value[index].coverPath = cover.file
+  shotIndex.value = index
 }
 const deleteVideo = (index) => {
   configs.value[index].path = ''
   configs.value[index].videoPath = ''
+  configs.value[index].previewPath = ''
+  configs.value[index].coverPath = ''
 }
 
 const onAdd = () => {
@@ -165,7 +167,8 @@ const onAdd = () => {
         shotEndTime: 0
       }
     ],
-    previewPath: ''
+    previewPath: '',
+    coverPath: ''
   })
 }
 const onDelete = (index) => {
@@ -184,11 +187,11 @@ const onMergeVideos = async () => {
       inputs.push(item.previewPath)
     }
   })
-  console.log(inputs, 'inputs')
   const outpath = await mergeVideos(inputs, output + '/' + new Date().getTime() + '.mp4')
   if (bgm.value) {
     await mergeBgm(outpath, bgm.value, output + '/' + new Date().getTime() + '.mp4')
   }
+  message.success('合成视频已完成')
 }
 const detailView = ref('whole')
 const onChangeRightPannel = (type, index) => {
@@ -213,7 +216,6 @@ const setSubtitle = (index, subtitle) => {
   configs.value[shotIndex.value].subtitleDubbing[index].subtitle = subtitle
 }
 const setAudioTime = async (subtitleDubbing) => {
-  console.log(subtitleDubbing, 'subtitleDubbing')
   configs.value[shotIndex.value].subtitleDubbing = subtitleDubbing
 }
 const setRenderTime = (time) => {
@@ -221,21 +223,29 @@ const setRenderTime = (time) => {
   configs.value[shotIndex.value].shotEndTime = time
 }
 const onRenderShot = async () => {
-  const outputDir = await getDirPath()
+  const outputDir = await getTempPath()
   const config = configs.value[shotIndex.value]
   const endTime = config.subtitleDubbing[config.subtitleDubbing.length - 1].shotEndTime
-  console.log(config, 'config')
   const output = await clipVideoToBuffer(
     config.videoPath,
     0,
     endTime,
     generateSubtitles(config.subtitleDubbing),
-    `${outputDir}/镜头${shotIndex.value + 1}-${new Date().getTime()}.mp4`
+    `${outputDir}镜头${shotIndex.value + 1}-${new Date().getTime()}.mp4`
   )
   configs.value[shotIndex.value].previewPath = output.file
+  open.value = true
 }
 const renderLoading = ref(false)
+const open = ref(false)
+const hideModal = () => {
+  open.value = false
+}
 const onPreview = async () => {
+  if (configs.value[shotIndex.value].previewPath) {
+    open.value = true
+    return
+  }
   renderLoading.value = true
   try {
     await onRenderShot()
@@ -248,6 +258,9 @@ const onPreview = async () => {
 </script>
 
 <style scoped>
+.ai-edit-wrapper {
+  width: 100%;
+}
 .header {
   width: 100%;
   margin-right: 10px;
@@ -257,41 +270,54 @@ const onPreview = async () => {
   height: 50px;
   border-bottom: 2px solid #e8e8e8;
 }
+
 .content {
   display: flex;
 }
+
 .preview {
   flex: 1;
   margin: 20px 20px;
 }
+
 .preview-header {
   display: flex;
   justify-content: space-between;
 }
+
+.preview-content-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
 .preview-content {
   max-width: 420px;
   margin-top: 20px;
-  height: 640px;
+  height: 580px;
   border: 2px solid #eee;
   border-radius: 4px;
   background-color: #f7f7f7;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 0 40px;
 }
+
 .preview-mobile {
-  width: 60%;
+  width: 236px;
   background-color: rgb(43, 43, 43);
-  height: 500px;
+  height: 480px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-self: center;
 }
+
 .preview-tip {
   color: #fff;
   padding: 0 30px;
 }
+
 .preview-header-tip {
   margin-top: 10px;
   font-size: 12px;
@@ -299,11 +325,13 @@ const onPreview = async () => {
   text-align: center;
   width: 100%;
 }
+
 .config {
   display: flex;
   flex-direction: column;
   padding: 10px;
 }
+
 .config-header {
   height: 60px;
   display: flex;
@@ -311,13 +339,16 @@ const onPreview = async () => {
   width: 400px;
   justify-content: space-between;
 }
+
 .config-tip-title {
   font-size: 16px;
   margin-bottom: 10px;
 }
+
 .config-tip {
   font-size: 12px;
 }
+
 .config-content__item {
   width: 400px;
   height: 240px;
@@ -325,6 +356,7 @@ const onPreview = async () => {
   border-radius: 4px;
   margin-top: 10px;
 }
+
 .item-header {
   padding: 0 10px;
   display: flex;
@@ -334,24 +366,30 @@ const onPreview = async () => {
   background-color: #f7f7f7;
   font-size: 14px;
 }
+
 .name {
   display: flex;
   align-items: center;
 }
+
 .name-count {
   font-size: 12px;
   color: #b0b0b0;
 }
+
 .name-left {
   margin-right: 30px;
 }
+
 .icon {
   width: 18px;
   cursor: pointer;
 }
+
 .delete {
   margin-left: 4px;
 }
+
 .config-bottom {
   margin-top: 10px;
   font-size: 14px;
@@ -359,6 +397,7 @@ const onPreview = async () => {
   display: flex;
   align-items: center;
 }
+
 .config-bottom-btn {
   margin-left: 5px;
 }
@@ -368,15 +407,18 @@ const onPreview = async () => {
   border-left: 2px solid #e8e8e8;
   padding: 20px;
 }
+
 .uploader-content {
   display: flex;
   align-items: center;
   height: 146px;
 }
+
 .video {
   width: 80px;
   margin-left: 10px;
 }
+
 .avatar-uploader {
   padding: 10px;
   display: flex;
@@ -398,9 +440,14 @@ const onPreview = async () => {
   flex-direction: column;
   align-items: center;
 }
+
 .preview-shot {
   height: 100%;
-  padding: 20px 0;
+  /* padding: 20px 0; */
+  width: 100%;
+}
+
+.modal-video {
   width: 100%;
 }
 </style>

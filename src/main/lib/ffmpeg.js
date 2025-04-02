@@ -16,20 +16,21 @@ export function mergeVideos(_e, inputFiles, outputFile) {
       command.input(file)
     })
     command
-    .on('start', commandLine => console.log('FFmpeg command:', commandLine))
-    .on('progress', progress => console.log(`Processing: ${progress}% done`))
-    .on('end', () => {
-      console.log('视频合成完成')
-      resolve({ success: true, file: outputFile })
-    })
-    .on('error', err => {
-      reject({ success: false, error: err })
-      console.error('Error:', err)})
-    .output(outputFile)
-    .outputOptions([
-        `-filter_complex concat=n=${inputFiles.length}:v=1:a=1` // 关键：拼接 3 个视频
-    ])
-    .run();
+      .on('start', (commandLine) => console.log('FFmpeg command:', commandLine))
+      .on('progress', (progress) => console.log(`Processing: ${progress}% done`))
+      .on('end', () => {
+        console.log('视频合成完成')
+        resolve({ success: true, file: outputFile })
+      })
+      .on('error', (err) => {
+        reject({ success: false, error: err })
+        console.error('Error:', err)
+      })
+      .output(outputFile)
+      .outputOptions([
+        `-filter_complex concat=n=${inputFiles.length}:v=1:a=1` // 拼接 x 个视频
+      ])
+      .run()
   })
 }
 
@@ -59,19 +60,6 @@ export function mergeBgm(_e, inputFile, bgmFile, outputFile) {
   })
 }
 
-const subtitles = `
-1
-00:00:00,000 --> 00:00:03,000
-若添加多条字幕
-
-2
-00:00:04,000 --> 00:00:07,000
-最终每条成片会随
-
-3
-00:00:08,000 --> 00:00:10,000
-机选其一来使用
-`
 /**
  * 剪辑视频并存入内存 Buffer
  * @param inputFile 输入视频路径
@@ -80,15 +68,15 @@ const subtitles = `
  * @returns 剪辑后的视频 Buffer
  */
 export function clipVideoToBuffer(_e, inputFile, startTime, endTime, subtitleText, outputFile) {
-  console.log(subtitleText, subtitles, 'subtitleText')
   // 生成临时字幕文件
   const subtitleFile = path.join(app.getPath('temp'), `temp_subtitles_${Date.now()}.srt`)
 
   fs.writeFileSync(subtitleFile, subtitleText, 'utf8')
   return new Promise((resolve, reject) => {
     const duration = endTime - startTime
-
-    ffmpeg(inputFile)
+    const command = ffmpeg()
+    command
+      .input(inputFile)
       .setStartTime(startTime)
       .setDuration(duration)
       .outputOptions('-vf', `subtitles=${subtitleFile}`) // 通过 FFmpeg 添加字幕
@@ -100,6 +88,25 @@ export function clipVideoToBuffer(_e, inputFile, startTime, endTime, subtitleTex
       }) // 获取剪辑后的 Buffer
       .on('error', (err) => reject(`剪辑失败: ${err.message}`))
       .output(outputFile) // 临时目录，避免 FFmpeg 直接操作源文件
+      .run()
+  })
+}
+
+export function getVideoFirstCover(_e, inputFile, outputFile) {
+  const command = ffmpeg()
+  return new Promise((resolve, reject) => {
+    command
+      .input(inputFile)
+      .on('end', () => {
+        console.log(`Image saved at: ${outputFile}`)
+        resolve({ success: true, file: outputFile })
+      })
+      .on('error', (err) => {
+        console.error('Error:', err)
+        reject(err)
+      })
+      .output(outputFile) // 直接指定输出路径
+      .frames(1) // 仅截取 1 帧
       .run()
   })
 }

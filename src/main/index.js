@@ -2,8 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import './lib/ffmpeg'
-import { getFilePath, getDirPath } from './lib/file/path'
-import { mergeVideos, mergeBgm, clipVideoToBuffer } from './lib/ffmpeg'
+import { getFilePath, getDirPath, getTempPath } from './lib/file/path'
+import { mergeVideos, mergeBgm, clipVideoToBuffer, getVideoFirstCover } from './lib/ffmpeg'
 function createWindow() {
   // Create the browser window.
   const { screen } = require('electron')
@@ -17,7 +17,8 @@ function createWindow() {
     }
   })
 
-  if (is.dev) mainWindow.webContents.openDevTools()
+  // if (is.dev) mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -57,6 +58,8 @@ app.whenReady().then(() => {
   ipcMain.handle('mergeVideos', mergeVideos)
   ipcMain.handle('mergeBgm', mergeBgm)
   ipcMain.handle('clipVideoToBuffer', clipVideoToBuffer)
+  ipcMain.handle('getVideoFirstCover', getVideoFirstCover)
+  ipcMain.handle('getTempPath', getTempPath)
   createWindow()
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

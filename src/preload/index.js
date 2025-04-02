@@ -10,6 +10,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', {
       getFilePath: (extensions) => ipcRenderer.invoke('getFilePath', extensions),
       getDirPath: () => ipcRenderer.invoke('getDirPath'),
+      getTempPath: () => ipcRenderer.invoke('getTempPath'),
       mergeVideos: (inputFiles, outputFile) =>
         ipcRenderer.invoke('mergeVideos', inputFiles, outputFile),
       mergeBgm: (inputFile, bgmFile, outputFile) =>
@@ -22,7 +23,9 @@ if (process.contextIsolated) {
           endTime,
           subtitleFile,
           outputFile
-        )
+        ),
+      getVideoFirstCover: (inputFile, outputFile) =>
+        ipcRenderer.invoke('getVideoFirstCover', inputFile, outputFile)
     })
     contextBridge.exposeInMainWorld('platform', process.platform)
   } catch (error) {

@@ -20,6 +20,8 @@ $ pnpm install
 $ pnpm dev
 ```
 
+node ./node_modules/electron/install.js
+
 ### Build
 
 ```bash

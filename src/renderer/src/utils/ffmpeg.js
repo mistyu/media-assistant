@@ -21,3 +21,8 @@ export async function clipVideoToBuffer(input, startTime, endTime, subtitleDubbi
   )
   return result
 }
+
+export async function getVideoFirstCover(inputFile, outputFile) {
+  const result = await window.electron.getVideoFirstCover(inputFile, outputFile)
+  return result
+}

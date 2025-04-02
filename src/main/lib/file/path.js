@@ -1,4 +1,5 @@
 const { dialog } = require('electron/main')
+import { app } from 'electron'
 
 export async function getFilePath(extensions = []) {
   const { canceled, filePaths } = await dialog.showOpenDialog({
@@ -24,3 +25,7 @@ export async function getDirPath() {
   }
 }
 
+export async function getTempPath() {
+  const tempPath = await app.getPath('temp')
+  return tempPath
+}
